@@ -1,4 +1,4 @@
-
+import heapq
 
 class Graph_Advanced():
     def __init__(self, directed=False):
@@ -112,3 +112,61 @@ class Graph_Advanced():
         - Una representación en cadena del diccionario del grafo.
         """
         return str(self.graph)
+    
+    def shortest_path(self, start, end): 
+        """
+        Calcular el camino más corto desde un nodo de inicio hasta un nodo de destino en un grafo disperso con potencialmente miles de nodos. 
+        Debe ejecutarse en menos de 0.5 segundos y encontrar la distancia más corta entre dos nodos.
+
+        Parámetros:
+        - start: El nodo de inicio.
+        - end: El nodo de destino.
+
+        Devuelve:
+        Una tupla que contiene la distancia total del camino más corto y una lista de nodos que representa ese camino.
+        """
+
+        # creamos un diccionadio con las distancias en infinito
+        distances = {vertex: float('inf') for vertex in self.graph}
+                
+        distances[start] = 0
+        
+        # Cola de prioridad para contener los vértices que se explorarán, inicializada con el nodo de inicio
+        priority_queue = [(0, start)]
+        
+        # Diccionario para almacenar el camino recorrido para llegar a cada vértice
+        previous_nodes = {vertex: None for vertex in self.graph}
+        
+        while priority_queue:
+            # Obtenga el vértice con la menor distancia
+            current_distance, current_vertex = heapq.heappop(priority_queue)
+            
+            # Si hemos llegado al nodo final, reconstruimos la ruta.
+            if current_vertex == end:
+                # creamos una ruta vacia
+                path = []
+                # mientesa el vertice no see nulo agregamos el vertice en la ruta
+                while current_vertex is not None:
+                    path.append(current_vertex) # agregamos el vertice actual en la ruta vamos del final al inicio
+                    current_vertex = previous_nodes[current_vertex] # cambiamos el vertice_Actual y seguir el while
+                # al terminar el while debolvemos la ruta invertida desde il inicio al final    
+                return current_distance, path[::-1]
+            
+            # Si la distancia actual es mayor que la distancia más corta registrada, omitir
+            if current_distance > distances[current_vertex]:
+                continue
+            
+            # Explorar vecinos
+            for neighbor, weight in self.graph[current_vertex].items():
+                distance = current_distance + weight
+                
+                # Si se encuentra un camino más corto hacia el vecino
+                if distance < distances[neighbor]:
+                    distances[neighbor] = distance
+                    previous_nodes[neighbor] = current_vertex # guardamos el vecino con menor distancia en previus_nodes
+                    # añadir el vecino a la cola de prioridad (`priority_queue`), junto con su distancia
+                    heapq.heappush(priority_queue, (distance, neighbor)) 
+        
+        # Si el nodo final es inalcanzable, devuelve infinito y una ruta vacía
+        return float('inf'), []
+        # return dist, path
