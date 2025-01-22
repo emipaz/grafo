@@ -1,5 +1,5 @@
 import heapq
-
+import itertools
 class Graph_Advanced():
     def __init__(self, directed=False):
         """
@@ -170,3 +170,109 @@ class Graph_Advanced():
         # Si el nodo final es inalcanzable, devuelve infinito y una ruta vacía
         return float('inf'), []
         # return dist, path
+
+    def tsp_small_graph(self, start_vertex):
+        """
+        Resuelve el Problema del Viajante de Comercio para un grafo completo pequeño (~10 nodos) comenzando desde un nodo especificado. 
+        Se requiere encontrar el recorrido óptimo. Se esperan grafos con un máximo de 10 nodos. Debe ejecutarse en menos de 1 segundo.
+
+        Parámetros:
+        - `start_vertex`: El nodo de inicio.
+
+        Retornos:
+        - Una tupla que contiene la distancia total del recorrido y una lista de nodos que representan el camino del recorrido.
+        """
+        # Asegúrese de que el vértice inicial esté en el gráfo
+        if start_vertex not in self.graph:
+            raise KeyError("El vértice inicial debe existir en el gráfico.")
+        
+        # Lista de vértices excluyendo el vértice inicial
+        vertices = list(self.graph.keys())
+        vertices.remove(start_vertex)
+        
+        # Número de vértices
+        n = len(vertices)
+        # Mapeo de vertex por un indece
+        # index_map = {vertex: i for i, vertex in enumerate(vertices)}
+        index_map = {}
+        for i, vertex in enumerate(vertices):
+            index_map[vertex] = i
+        
+        # Inicializar la tabla de memorización
+        memo = {}
+        # Caso base: distancia desde el vértice inicial hasta cada vértice
+        for i in range(n):
+            memo[(1 << i, i)] = (self._get_edge_weight(start_vertex, vertices[i]), None)
+            # Este bloque inicializa la tabla de memoración con las distancias desde el vértice inicial a cada vértice del subconjunto. 
+            # Se utiliza un `bitmask` (`1 << i`) para representar subconjuntos de vértices.  usando << "desplazamiento de bits hacia la izq"
+
+        # Iterar sobre subconjuntos de vértices
+        for subset_size in range(2, n + 1):
+            # Se itera sobre todas las combinaciones posibles de vértices de tamaño `subset_size`, 
+            for subset in itertools.combinations(range(n), subset_size):
+                subset_mask = sum(1 << i for i in subset)
+
+                # Calcular la ruta más corta para cada punto final del subconjunto
+                for endpoint in subset:
+                    # Para cada vértice `endpoint` del subconjunto se calcula la ruta más corta desde 
+                    # los vértices anteriores que ya han sido procesados. 
+                    # Aquí es donde se utiliza la técnica de programación dinámica para evitar cálculos redundantes.
+                    prev_mask = subset_mask & ~(1 << endpoint) # & es un AND y ~ un NOT de operadores de bits
+                    min_dist = float('inf')
+                    min_prev = None
+
+                    # Encuentra la ruta más corta al punto final actual
+                    for prev in subset:
+                        if prev == endpoint:
+                            continue
+                        if (prev_mask, prev) in memo:
+                            dist, _ = memo[(prev_mask, prev)]
+                            dist += self._get_edge_weight(vertices[prev], vertices[endpoint])
+                            
+                            if dist < min_dist:
+                                min_dist = dist
+                                min_prev = prev
+                    
+                    memo[(subset_mask, endpoint)] = (min_dist, min_prev)
+
+        # Encuentra la ruta más corta que regresa al vértice inicial
+        min_distance = float('inf')
+        last_vertex = None
+        full_mask = (1 << n) - 1
+        
+        for i in range(n):
+            if (full_mask, i) in memo:
+                dist, _ = memo[(full_mask, i)]
+                dist += self._get_edge_weight(vertices[i], start_vertex)
+                
+                if dist < min_distance:
+                    min_distance = dist
+                    last_vertex = i
+        
+        # Reconstruir el camino
+        path = [start_vertex]
+        mask = full_mask
+        current_vertex = last_vertex
+        while current_vertex is not None:
+            # Añade el vértice actual al camino. 'vertices' es una lista o un arreglo que contiene
+            # la representación (como un nombre o una posición) de los vértices.
+            path.append(vertices[current_vertex])
+            # Recupera el siguiente vértice en el camino a partir de la memoria (memo).
+            # 'memo' es una estructura de datos que almacena resultados intermedios
+            # para evitar el cálculo redundante. Se asume que contiene información sobre
+            # el estado representado por 'mask' y el 'current_vertex'.
+            next_vertex = memo[(mask, current_vertex)][1]
+            # Actualiza la 'mask' (máscara de bits) para eliminar el 'current_vertex' de los vértices visitados.
+            # '1 << current_vertex' produce un número que tiene un 1 en la posición de
+            # 'current_vertex'. Al utilizar el operador NOT (~), se invierten los bits,
+            # creando una máscara donde el bit en 'current_vertex' es 0 y otros son 1.
+            # Luego, se realiza una operación AND (&) con 'mask' para eliminar el vértice actual de la máscara.
+            mask &= ~(1 << current_vertex)
+            # Actualiza 'current_vertex' para el siguiente bucle, asignándole el 
+            # vértice que se obtuvo de 'memo'. Si 'next_vertex' es None, el bucle se detendrá.
+            current_vertex = next_vertex
+        
+        path.append(start_vertex)
+        
+        return min_distance, path
+        
