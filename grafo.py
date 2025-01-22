@@ -275,4 +275,60 @@ class Graph_Advanced():
         path.append(start_vertex)
         
         return min_distance, path
+
+    def tsp_large_graph(self, start):
+        """
+        Resolver el Problema del Viajante de Comercio para un grafo completo grande (~1000 nodos) 
+        comenzando desde un nodo especificado.
+        No se requiere encontrar el recorrido óptimo. Debe ejecutarse en menos de 0.5 segundos 
+        con una solución "suficientemente buena".
+
+        Parámetros:
+        - start: El nodo de inicio.
+
+        Devuelve:
+        Una tupla que contiene la distancia total del recorrido y una lista de nodos que representan la ruta del recorrido.
+        """
+        # Asegúrese de que el vértice inicial esté en el gráfo
+        if start not in self.graph:
+            raise KeyError("El vértice inicial debe existir en el gráfico.")
         
+        
+        # iniciaizae variables
+        unvisited = set(self.graph.keys())
+        unvisited.remove(start)
+        current_node = start
+        tour = [start]
+        total_distance = 0
+
+        # Heurística del vecino más cercano
+        
+   
+        while unvisited:
+            # Mientras haya nodos no visitados, se busca el nodo más cercano 
+            # desde el nodo actual (`current_node`). 
+            nearest_node = None
+            nearest_distance = float('inf')
+            
+            # Encuentra el nodo no visitado más cercano
+            for node in unvisited:
+                # Para cada nodo no visitado, se calcula la distancia al nodo actual 
+                # utilizando el método `_get_edge_weight`. 
+                distance = self._get_edge_weight(current_node, node)
+                if distance < nearest_distance:
+                    # Si esta distancia es menor que la distancia más cercana 
+                    # encontrada hasta el momento, se actualizan `nearest_distance` y `nearest_node`.
+                    nearest_distance = distance
+                    nearest_node = node
+            
+            # Actualizamos el recorrido
+            tour.append(nearest_node) # añade eñ nodo al tour
+            total_distance += nearest_distance # suma la distancia
+            current_node = nearest_node # movemos al siguiente nodo
+            unvisited.remove(nearest_node) # eliminamos el nodo visitado
+        
+        # cerramos el recorrido 
+        total_distance += self._get_edge_weight(current_node, start) #
+        tour.append(start)
+        
+        return total_distance, tour
