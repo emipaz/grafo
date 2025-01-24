@@ -1,5 +1,8 @@
 import heapq
 import itertools
+import random
+from math import exp
+
 class Graph_Advanced():
     def __init__(self, directed=False):
         """
@@ -332,3 +335,101 @@ class Graph_Advanced():
         tour.append(start)
         
         return total_distance, tour
+    def tsp_medium_graph(self, start):
+        """
+        Resolver el Problema del Viajante de Comercio para un grafo completo de tamaño mediano (~300 nodos) 
+        comenzando desde un nodo especificado. Se espera que funcione mejor que tsp_large_graph. 
+        Debe ejecutarse en menos de 1.5 segundos.
+        
+        Parámetros:
+        inicio: El nodo de inicio.
+        
+        Devuelve:
+        Una tupla que contiene la distancia total del recorrido y una lista de nodos que representan el camino del recorrido.
+        """
+        if start not in self.graph:
+            raise KeyError("El vértice inicial debe existir en el gráfico.")
+        
+        # Nearest Neighbor heuristic to generate an initial tour
+        # Inicialización del Algoritmo Nearest Neighbor
+        unvisited = set(self.graph.keys()) # conjunto de nodos no visitados
+        unvisited.remove(start) # eliminamos el nodo inicial
+        current_node = start # primer nodo para arrancar
+        tour = [start] # ruta con el inicio
+        
+        while unvisited:  # mienteras exista nodo para visitar
+            # buscanis el nodo con la menor distancia del nodo inicial
+            nearest_node = min(unvisited, 
+                               key = lambda node: self._get_edge_weight(current_node, node))
+            tour.append(nearest_node)  # agregamos el nodo a la ruta
+            current_node = nearest_node # cambiamos de nodo
+            unvisited.remove(nearest_node) # eliminamos nodo visitado
+        
+        # al final agregamos el nodo de inicio
+        tour.append(start) 
+        
+        # Simulated Annealing
+        
+        def calculate_total_distance(tour):
+            """calcula la distancia total del tour """
+            return sum(self._get_edge_weight(tour[i], tour[i + 1]) for i in range(len(tour) - 1))
+        
+        def simulated_annealing(tour, initial_temp, cooling_rate, max_iterations):
+            """
+            Optimiza un tour utilizando el algoritmo de Simulated Annealing.
+
+            Este algoritmo intenta encontrar una mejor solución al problema del Viajante de Comercio al permitir 
+            la aceptación de soluciones peores al principio para escapar de óptimos locales, enfriando gradualmente 
+            la "temperatura" y reduciendo así la probabilidad de aceptar tales soluciones.
+
+            Parámetros:
+                tour (list): Lista de nodos que representan el recorrido inicial.
+                initial_temp (float): Temperatura inicial que controla la probabilidad de aceptar soluciones peores.
+                cooling_rate (float): Tasa de enfriamiento que determina cómo disminuye la temperatura en cada iteración.
+                max_iterations (int): Número máximo de iteraciones a realizar para optimizar el tour.
+
+            Devuelve:
+                tuple: Una tupla que contiene:
+                    - list: El tour optimizado.
+                    - float: La distancia total del tour optimizado.
+            """
+            current_distance = calculate_total_distance(tour) # calcula la distancia total del tour
+            best_tour = tour[:] # copia el tout
+            best_distance = current_distance # tomo la distancia total como la mejor
+            temperature = initial_temp # copia el valor de la temperatura 
+            
+            for _ in range(max_iterations): # itera por la iteraciones pasadas
+                # Esta parte selecciona aleatoriamente dos índices `i` y `j` del recorrido (tour) (excluyendo el primer y último nodo
+                # para asegurarse de que no se inviertan el nodo de inicio y final, ya que el tour vuelve al nodo de inicio.
+                # El resultado de `random.sample` es una lista de dos índices, que se ordenan para garantizar que `i` sea menor que `j`. 
+                # Esto es importante para que el siguiente paso funcione correctamente
+                i, j = sorted(random.sample(range(1, len(tour) - 1), 2)) 
+                # se genera una nueva ruta y se calcula su distancia 
+                new_tour = tour[:i] + tour[i:j][::-1] + tour[j:]
+                new_distance = calculate_total_distance(new_tour)
+                 
+                
+                if new_distance < best_distance or random.random() < exp((current_distance - new_distance) / temperature):
+                    # new_distance < best_distance`**: Esta parte  evalúa si la nueva distancia del tour es menor que la mejor 
+                    # distancia encontrada hasta el momento (`best_distance`). Si es así, el nuevo tour se acepta automáticamente, ya que representa una mejora.
+                    # random.random() < np.exp((current_distance - new_distance) / temperature) 
+                    # Esta parte de la condición implementa la función de aceptación probabilística del Simulated Annealing.
+                    # random.random()`** genera un número aleatorio entre 0 y 1.
+                    # exp((current_distance - new_distance) / temperature) calcula la probabilidad de aceptar un nuevo tour 
+                    # que es peor que el anterior (es decir, `new_distance` es mayor que `current_distance`). 
+                    # Esta probabilidad disminuye a medida que aumenta `temperature`, permitiendo así aceptar soluciones peores en las primeras etapas del algoritmo,
+                    # cuando la temperatura es alta. A medida que la temperatura baja, la probabilidad de aceptar soluciones peores también disminuye.
+                    # Esta mecánica permite al algoritmo escapar de óptimos locales, lo que es crucial dado que el espacio de soluciones puede ser muy irregular.
+                    tour = new_tour
+                    current_distance = new_distance
+                    if new_distance < best_distance:
+                        best_tour = new_tour
+                        best_distance = new_distance
+                
+                temperature *= cooling_rate # vamos disminuyendo la temperarura en cada iterecion
+            
+            return best_tour, best_distance
+        
+        optimized_tour, optimized_distance = simulated_annealing(tour, initial_temp = 1000, cooling_rate = 0.995, max_iterations = 1000)
+        
+        return optimized_distance, optimized_tour
